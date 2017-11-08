@@ -1,18 +1,16 @@
 ﻿using Nancy;
 using Nancy.Extensions;
+using Nancy.ModelBinding;
 using System;
 
 namespace ConsoleApp_TesteNancy
 {
     public class SimpleNancyModule : NancyModule
     {
-        private IMyService _srv;
-
         private static Response RequiresAuthentication(NancyContext context)
         {
             Response response = null;
-            if ((context.CurrentUser == null) ||
-                String.IsNullOrWhiteSpace(context.CurrentUser.UserName))
+            if (string.IsNullOrWhiteSpace(context.CurrentUser?.UserName))
             {
                 response = new Response { StatusCode = HttpStatusCode.Unauthorized };
             }
@@ -22,9 +20,8 @@ namespace ConsoleApp_TesteNancy
 
         public SimpleNancyModule(IMyService srv): base("/hbsis")
         {
-            _srv = srv;
 
-            Before.AddItemToStartOfPipeline(RequiresAuthentication);
+            // Before.AddItemToStartOfPipeline(RequiresAuthentication);
 
             Get["/test/{param}"] = paramns =>
             {
@@ -56,8 +53,16 @@ namespace ConsoleApp_TesteNancy
             Post["/post-test"] = _ =>
             {
                 Console.WriteLine("***Post called***");
-                var s = Response.AsJson(Request.Body.AsString(), HttpStatusCode.OK);
+                var s = Response.AsJson(Request.Body.AsString());
                 return s;
+            };
+
+            Post["/post-model"] = _ =>
+            {
+                var model = this.BindAndValidate<ModeloTeste>();
+                var valRes = ModelValidationResult;
+
+                return !valRes.IsValid ? Response.AsJson(valRes) : Response.AsJson(model);
             };
         }
     }
